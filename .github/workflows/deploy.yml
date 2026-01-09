@@ -1,45 +1,66 @@
-name: Build and Deploy
+name: Build and Debug
 
 on:
   push:
     branches: [main]
 
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
-    - name: Use Node.js 20.x
+    - name: Debug Info
+      run: |
+        echo "=== System Info ==="
+        echo "Runner OS: $(uname -a)"
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        
+        echo "=== Package Info ==="
+        if [ -f "package.json" ]; then
+          echo "package.json exists"
+          cat package.json | grep -A5 -B5 "scripts"
+        else
+          echo "ERROR: package.json not found!"
+        fi
+    
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20.x'
+        node-version: '18'
         cache: 'npm'
     
-    - run: npm ci
-    - run: npm run build
-    
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4  # PAKAI v4, BUKAN v3
-      with:
-        name: build-files
-        path: dist/
-        retention-days: 1
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4  # PAKAI v4
-      with:
-        name: build-files
-        path: dist/
-    
-    - name: Deploy (Simulate)
+    - name: Install dependencies
       run: |
-        echo "Deployment would happen here"
-        echo "Built files:"
-        ls -la dist/
+        echo "Installing dependencies..."
+        npm install
+        echo "Installation complete"
+    
+    - name: Check build script
+      run: |
+        echo "Checking npm scripts..."
+        npm run
+        
+    - name: Try Build
+      run: |
+        echo "Attempting to build..."
+        npm run build || echo "Build failed with error code: $?"
+    
+    - name: List files after build
+      run: |
+        echo "Files after build attempt:"
+        ls -la
+        if [ -d "dist" ]; then
+          echo "dist folder contents:"
+          ls -la dist/
+        fi
+        if [ -d "build" ]; then
+          echo "build folder contents:"
+          ls -la build/
+        fi
